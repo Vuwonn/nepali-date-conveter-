@@ -1,60 +1,29 @@
 import { useMemo, useState } from "react";
 import {
-  BS_MAX_YEAR,
-  BS_MIN_YEAR,
   buildMonthGrid,
   bsToString,
-  bsWeekday,
-  formatAdDate,
   formatAdDay,
-  formatBsDate,
-  formatBsDateNepali,
+  formatAdDate,
   monthName,
   shiftMonth,
   toNepaliDigits,
   todayBS,
-  weekdayName,
+  toAD,
   type CalendarCell,
   type MonthView,
 } from "../lib/nepaliDate";
 import {
   eventsFor,
   eventsForMonth,
-  type PatroEventType,
 } from "../lib/nepaliEvents";
 
-const YEARS = Array.from(
-  { length: BS_MAX_YEAR - BS_MIN_YEAR + 1 },
-  (_, index) => BS_MIN_YEAR + index,
-);
-
-const EVENT_BADGE: Record<
-  PatroEventType,
-  { label: string; className: string }
-> = {
-  "public-holiday": {
-    label: "Holiday",
-    className:
-      "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300",
-  },
-  festival: {
-    label: "Festival",
-    className:
-      "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300",
-  },
-  observance: {
-    label: "Observance",
-    className:
-      "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
-  },
-};
+const WEEKDAYS = ["आइतवार", "सोमवार", "मंगलवार", "बुधवार", "बिहिवार", "शुक्रवार", "शनिवार"];
 
 const cellBsDate = (cell: CalendarCell) => bsToString(cell.bs);
 
 const NepaliPatro = () => {
   const today = todayBS();
   const [view, setView] = useState<MonthView>({ year: today.year, month: today.month });
-  const [selectedDay, setSelectedDay] = useState<number | null>(today.day);
 
   const grid = useMemo(() => buildMonthGrid(view.year, view.month), [view]);
   const previous = shiftMonth(view, -1);
@@ -68,280 +37,196 @@ const NepaliPatro = () => {
     [view],
   );
 
-  const selected: CalendarCell | undefined = grid.cells.find(
-    (cell) => cell.inMonth && cell.bs.day === selectedDay,
-  );
-
-  const selectedEvents = selected ? eventsFor(cellBsDate(selected)) : [];
-
   const goToToday = () => {
     setView({ year: today.year, month: today.month });
-    setSelectedDay(today.day);
   };
 
-  const controlClass =
-    "rounded-md border bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40";
+  const getAdMonthSpan = (cells: CalendarCell[]) => {
+    const inMonthCells = cells.filter(c => c.inMonth && c.ad);
+    if (inMonthCells.length === 0) return "";
+    const firstAdDate = inMonthCells[0].ad!;
+    const lastAdDate = inMonthCells[inMonthCells.length - 1].ad!;
+    const [y1, m1] = firstAdDate.split("-").map(Number);
+    const [y2, m2] = lastAdDate.split("-").map(Number);
+    
+    const m1Name = new Date(y1, m1 - 1, 1).toLocaleString('en-US', { month: 'short' });
+    const m2Name = m1 === m2 ? "" : `/${new Date(y2, m2 - 1, 1).toLocaleString('en-US', { month: 'short' })}`;
+    const yDisplay = y1 === y2 ? y1 : `${y1}/${y2}`;
+    
+    return `${m1Name}${m2Name} ${yDisplay}`;
+  };
+
+  const adMonthSpanText = useMemo(() => getAdMonthSpan(grid.cells), [grid.cells]);
 
   return (
-    <section className="mx-auto max-w-6xl px-6 py-14">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Nepali Patro</h1>
-          <p className="mt-2 text-gray-600">Bikram Sambat calendar with English dates.</p>
-        </div>
-        <button
-          type="button"
-          onClick={goToToday}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          Today
-        </button>
-      </div>
-
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="rounded-xl border bg-white p-4 shadow-sm sm:p-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => previous && setView(previous)}
-              disabled={!previous}
-              className={controlClass}
-              aria-label="Previous month"
-            >
-              ‹
-            </button>
-
-            <select
-              value={view.month}
-              onChange={(e) => setView({ ...view, month: Number(e.target.value) })}
-              className="rounded-md border bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              aria-label="Month"
-            >
-              {Array.from({ length: 12 }, (_, index) => (
-                <option key={index} value={index}>
-                  {monthName(index)} · {monthName(index, false, true)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={view.year}
-              onChange={(e) => setView({ ...view, year: Number(e.target.value) })}
-              className="rounded-md border bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              aria-label="Year"
-            >
-              {YEARS.map((year) => (
-                <option key={year} value={year}>
-                  {year} BS
-                </option>
-              ))}
-            </select>
-
-            <button
-              type="button"
-              onClick={() => next && setView(next)}
-              disabled={!next}
-              className={`${controlClass} ml-auto`}
-              aria-label="Next month"
-            >
-              ›
+    <section className="mx-auto max-w-[1400px] px-2 sm:px-4 py-4 sm:py-8 flex flex-col lg:flex-row gap-4 sm:gap-6 bg-[#f4f5f7] min-h-screen font-sans">
+      <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-6">
+        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 sm:pb-6 mb-2 sm:mb-4 gap-3">
+          <div className="flex items-baseline gap-2 sm:gap-3">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+              {monthName(view.month, false, true)} {toNepaliDigits(view.year)}
+            </h1>
+            <button className="flex items-center gap-1 text-[11px] sm:text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
+              {monthName(view.month)} - {adMonthSpanText}
+              <svg className="w-3 h-3 sm:w-4 sm:h-4 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
           </div>
 
-          <div className="mt-5 text-center">
-            <p className="text-xl font-bold text-gray-900">
-              {monthName(view.month)} {view.year}
-            </p>
-            <p className="text-sm text-gray-500">
-              {toNepaliDigits(`${monthName(view.month, false, true)} ${view.year}`)}
-            </p>
+          <div className="flex items-center justify-end w-full sm:w-auto gap-3">
+            <button
+              onClick={goToToday}
+              className="px-3 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-bold text-white bg-[#a81c1c] rounded shadow-sm hover:bg-red-800 transition-colors"
+            >
+              आज
+            </button>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button
+                onClick={() => previous && setView(previous)}
+                disabled={!previous}
+                className="p-1.5 sm:p-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 transition-all shadow-sm flex items-center justify-center"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                onClick={() => next && setView(next)}
+                disabled={!next}
+                className="p-1.5 sm:p-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 transition-all shadow-sm flex items-center justify-center"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
           </div>
+        </header>
 
-          <div className="mt-5 grid grid-cols-7 gap-1 sm:gap-2">
-            {Array.from({ length: 7 }, (_, index) => (
-              <div key={index} className="pb-1 text-center text-xs font-semibold text-gray-500">
-                <span className="block">{weekdayName(index, true)}</span>
-                <span className="block text-[10px] font-normal text-gray-400">
-                  {weekdayName(index, true, true)}
-                </span>
+        <div className="border border-gray-200 rounded-sm overflow-hidden bg-white">
+          <div className="grid grid-cols-7 bg-white">
+            {WEEKDAYS.map((day, index) => (
+              <div
+                key={index}
+                className={`py-2 sm:py-3 text-center text-[10px] sm:text-sm font-bold border-r border-b last:border-r-0 border-gray-200 ${
+                  index === 0 || index === 6 ? "text-[#a81c1c]" : "text-gray-700"
+                }`}
+              >
+                <span className="hidden sm:inline">{day}</span>
+                <span className="sm:hidden">{day.slice(0, 1)}</span>
               </div>
             ))}
-
+          </div>
+          
+          <div className="grid grid-cols-7 bg-gray-200 gap-[1px]">
             {grid.cells.map((cell, index) => {
               const weekend = index % 7 === 0 || index % 7 === 6;
-              const isSelected = selectedDay === cell.bs.day && cell.inMonth;
-
               const cellEvents = cell.inMonth ? eventsFor(cellBsDate(cell)) : [];
-              const holiday = cellEvents.some(
-                (event) => event.type === "public-holiday",
-              );
-              const eventNames = cellEvents.map((event) => event.name).join(", ");
-              const screenReaderText = cellEvents
-                .map((event) => `${event.name} (${event.type.replace("-", " ")})`)
-                .join(", ");
-
-              const dayColor = cell.isToday
-                ? "text-white"
-                : !cell.inMonth
-                  ? "text-gray-300"
-                  : weekend || holiday
-                    ? "text-red-600"
-                    : "text-gray-800";
-
-              const subColor = cell.isToday
-                ? "text-blue-100"
-                : !cell.inMonth
-                  ? "text-gray-300"
-                  : "text-gray-400";
-
-              const dotClass = cell.isToday
-                ? holiday
-                  ? "bg-white dark:bg-white"
-                  : "bg-amber-200 dark:bg-amber-200"
-                : holiday
-                  ? "bg-red-500 dark:bg-red-400"
-                  : "bg-amber-500 dark:bg-amber-400";
-
-              const tooltip =
-                [cell.ad ? formatAdDate(cell.ad) : "", eventNames]
-                  .filter(Boolean)
-                  .join(" · ") || undefined;
+              const holiday = cellEvents.some((event) => event.type === "public-holiday");
+              const festival = cellEvents.some((event) => event.type === "festival");
+              const isRedDay = weekend || holiday || festival;
 
               return (
-                <button
+                <div
                   key={`${cell.bs.year}-${cell.bs.month}-${cell.bs.day}-${index}`}
-                  type="button"
-                  onClick={() => setSelectedDay(cell.bs.day)}
-                  title={tooltip}
-                  className={`flex min-h-14 flex-col items-center justify-center rounded-lg px-1 transition sm:min-h-16 ${cell.isToday
-                      ? "bg-blue-600 shadow-sm"
-                      : isSelected
-                        ? "bg-blue-50 ring-2 ring-blue-400"
-                        : cell.inMonth
-                          ? "hover:bg-blue-50"
-                          : "bg-gray-50 hover:bg-gray-100"
-                    }`}
+                  className={`relative flex flex-col min-h-[70px] sm:min-h-[110px] p-1 sm:p-2 bg-white ${
+                    cell.isToday ? "bg-[#276e48]" : ""
+                  }`}
                 >
-                  <span className={`text-base font-semibold ${dayColor}`}>{cell.bs.day}</span>
-                  <span className={`text-[10px] leading-tight ${subColor}`}>
-                    {cell.ad ? formatAdDay(cell.ad) : ""}
-                  </span>
-                  {cellEvents.length > 0 && (
-                    <>
-                      <span
-                        aria-hidden="true"
-                        className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`}
-                      />
-                      <span className="sr-only">{screenReaderText}</span>
-                    </>
-                  )}
-                </button>
+                  <div className="flex justify-between items-start w-full">
+                    <div className={`text-[9px] sm:text-[10px] w-full text-center px-3 sm:px-5 line-clamp-2 leading-[1.1] font-medium pt-0.5 sm:pt-1 min-h-[22px] sm:min-h-[26px] ${
+                      cell.isToday ? "text-green-50" : isRedDay ? "text-[#a81c1c]" : "text-gray-500"
+                    }`}
+                    title={cell.inMonth && cellEvents.length > 0 ? cellEvents.map((e) => e.nameNe).join(" / ") : ""}>
+                      {cell.inMonth && cellEvents.length > 0
+                        ? cellEvents.map((e) => e.nameNe).join(" / ")
+                        : ""}
+                    </div>
+                    {cell.inMonth && cell.ad && (
+                      <span className={`absolute top-1 sm:top-2 right-1.5 sm:right-2 text-[10px] sm:text-xs font-semibold ${
+                        cell.isToday ? "text-green-50" : "text-gray-500"
+                      }`}>
+                        {formatAdDay(cell.ad)}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className={`flex-grow flex flex-col items-center justify-center text-2xl sm:text-4xl font-bold mt-0.5 sm:mt-1 ${
+                    !cell.inMonth 
+                      ? "text-gray-300" 
+                      : cell.isToday
+                        ? "text-white"
+                        : isRedDay
+                          ? "text-[#a81c1c]"
+                          : "text-gray-800"
+                  }`}>
+                    {toNepaliDigits(cell.bs.day)}
+                  </div>
+
+                  <div className={`text-center text-[10px] sm:text-xs pb-1 font-medium ${
+                    cell.isToday ? "text-green-100" : isRedDay ? "text-red-400" : "text-gray-400"
+                  }`}>
+                    {/* Placeholder for Tithi since we don't have exact Tithi data */}
+                    {cell.inMonth ? "प्रतिपदा" : ""} 
+                  </div>
+                </div>
               );
             })}
           </div>
         </div>
+      </div>
 
-        <div className="rounded-xl border bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-            This month's events
-          </p>
-          {monthEvents.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-              No events this month
-            </p>
-          ) : (
-            <ul className="mt-3 divide-y divide-gray-100 dark:divide-gray-700">
-              {monthEvents.map(({ bsDate, day, event }) => (
-                <li key={`${bsDate}-${event.name}`}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedDay(day)}
-                    className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2 text-left hover:bg-blue-50 dark:hover:bg-gray-700"
-                  >
-                    <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-200">
-                      {day}
-                    </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                      {event.name}
-                    </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {event.nameNe}
-                    </span>
-                    <span
-                      className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-medium ${EVENT_BADGE[event.type].className}`}
-                    >
-                      {EVENT_BADGE[event.type].label}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+      <div className="w-full lg:w-[320px] xl:w-[420px] bg-[#fbf5f5] rounded-lg shadow-sm border border-red-100 overflow-hidden flex flex-col h-[500px] lg:h-[calc(100vh-4rem)]">
+        <div className="flex border-b border-red-100 bg-[#fbf5f5] sticky top-0 z-10 pt-2 px-2">
+          <button className="flex-1 pb-3 text-[15px] font-bold text-[#a81c1c] border-b-[3px] border-[#a81c1c]">
+            पर्वहरू
+          </button>
+          <button className="flex-1 pb-3 text-[15px] font-bold text-gray-500 hover:text-gray-700 border-b-[3px] border-transparent">
+            साइतहरू
+          </button>
+          <button className="flex-1 pb-3 text-[15px] font-bold text-gray-500 hover:text-gray-700 border-b-[3px] border-transparent">
+            आगामी बिदा
+          </button>
         </div>
 
-        <aside className="h-fit rounded-xl border bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Selected date
-          </p>
-          {selected ? (
-            <div className="mt-3 space-y-4">
-              <div>
-                <p className="text-lg font-bold text-gray-900">
-                  {formatBsDate(cellBsDate(selected))}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {toNepaliDigits(formatBsDateNepali(cellBsDate(selected)))}
-                </p>
-              </div>
-
-              <div className="border-t pt-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  English date
-                </p>
-                <p className="mt-1 text-sm font-medium text-gray-800">
-                  {selected.ad ? formatAdDate(selected.ad) : "—"}
-                </p>
-              </div>
-
-              <div className="border-t pt-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Day
-                </p>
-                <p className="mt-1 text-sm font-medium text-gray-800">
-                  {weekdayName(bsWeekday(cellBsDate(selected)))}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {weekdayName(bsWeekday(cellBsDate(selected)), false, true)}
-                </p>
-              </div>
-
-              {selectedEvents.length > 0 && (
-                <div className="border-t pt-3 dark:border-gray-700">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                    Events
-                  </p>
-                  <ul className="mt-2 space-y-2">
-                    {selectedEvents.map((event) => (
-                      <li
-                        key={event.name}
-                        className="flex flex-wrap items-baseline justify-between gap-x-2"
-                      >
-                        <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                          {event.name}
-                        </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {event.nameNe}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+        <div className="p-4 overflow-y-auto flex-1">
+          <div className="text-[13px] font-bold text-[#a81c1c] mb-2 px-2">आज</div>
+          
+          <div className="space-y-0 divide-y divide-gray-200">
+            {monthEvents.map(({ bsDate, day, event }, i) => {
+              const adDate = toAD(bsDate);
+              const adDateFormatted = adDate ? formatAdDate(adDate) : "";
+              
+              return (
+                <div key={`${bsDate}-${i}`} className="py-4 px-2 flex gap-4 items-center group hover:bg-red-50/50 transition-colors">
+                  <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden bg-white shadow-sm border border-gray-100 flex items-center justify-center">
+                    <img src={`https://api.dicebear.com/7.x/identicon/svg?seed=${event.nameNe}&backgroundColor=f8d7da`} alt="Icon" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-[13px] font-bold text-gray-900 group-hover:text-[#a81c1c] transition-colors">{event.nameNe}</h4>
+                    <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+                      {event.type === 'public-holiday' ? 'सार्वजनिक बिदा' : (event.type === 'festival' ? 'चाडपर्व' : 'विविध')}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-[13px] font-bold text-gray-900">
+                      {toNepaliDigits(day)} {monthName(view.month, true, true)}
+                    </div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">
+                      {adDateFormatted && adDateFormatted.split(",")[0]}
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-          ) : (
-            <p className="mt-3 text-sm text-gray-500">Tap a date for details.</p>
-          )}
-        </aside>
+              );
+            })}
+            {monthEvents.length === 0 && (
+              <div className="py-8 text-center text-gray-500 text-sm">
+                कुनै पर्व छैन
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -59,7 +59,7 @@ const NepaliPatro = () => {
   const adMonthSpanText = useMemo(() => getAdMonthSpan(grid.cells), [grid.cells]);
 
   return (
-    <section className="mx-auto max-w-[1400px] px-2 sm:px-4 py-4 sm:py-8 flex flex-col lg:flex-row gap-4 sm:gap-6 bg-[#f4f5f7] min-h-screen font-sans">
+    <section className="mx-auto max-w-350 px-2 sm:px-4 py-4 sm:py-8 flex flex-col lg:flex-row gap-4 sm:gap-6 bg-[#f4f5f7] min-h-screen font-sans">
       <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-6">
         <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 sm:pb-6 mb-2 sm:mb-4 gap-3">
           <div className="flex items-baseline gap-2 sm:gap-3">
@@ -119,7 +119,7 @@ const NepaliPatro = () => {
             ))}
           </div>
           
-          <div className="grid grid-cols-7 bg-gray-200 gap-[1px]">
+          <div className="grid grid-cols-7 bg-gray-200 gap-px">
             {grid.cells.map((cell, index) => {
               const weekend = index % 7 === 0 || index % 7 === 6;
               const cellEvents = cell.inMonth ? eventsFor(cellBsDate(cell)) : [];
@@ -130,12 +130,12 @@ const NepaliPatro = () => {
               return (
                 <div
                   key={`${cell.bs.year}-${cell.bs.month}-${cell.bs.day}-${index}`}
-                  className={`relative flex flex-col min-h-[70px] sm:min-h-[110px] p-1 sm:p-2 bg-white ${
+                  className={`relative flex flex-col min-h-17.5 sm:min-h-27.5 p-1 sm:p-2 bg-white ${
                     cell.isToday ? "bg-[#276e48]" : ""
                   }`}
                 >
                   <div className="flex justify-between items-start w-full">
-                    <div className={`text-[9px] sm:text-[10px] w-full text-center px-3 sm:px-5 line-clamp-2 leading-[1.1] font-medium pt-0.5 sm:pt-1 min-h-[22px] sm:min-h-[26px] ${
+                    <div className={`text-[9px] sm:text-[10px] w-full text-center px-3 sm:px-5 line-clamp-2 leading-[1.1] font-medium pt-0.5 sm:pt-1 min-h-5.5 sm:min-h-6.5 ${
                       cell.isToday ? "text-green-50" : isRedDay ? "text-[#a81c1c]" : "text-gray-500"
                     }`}
                     title={cell.inMonth && cellEvents.length > 0 ? cellEvents.map((e) => e.nameNe).join(" / ") : ""}>
@@ -152,7 +152,7 @@ const NepaliPatro = () => {
                     )}
                   </div>
                   
-                  <div className={`flex-grow flex flex-col items-center justify-center text-2xl sm:text-4xl font-bold mt-0.5 sm:mt-1 ${
+                  <div className={`grow flex flex-col items-center justify-center text-2xl sm:text-4xl font-bold mt-0.5 sm:mt-1 ${
                     !cell.inMonth 
                       ? "text-gray-300" 
                       : cell.isToday
@@ -177,7 +177,7 @@ const NepaliPatro = () => {
         </div>
       </div>
 
-      <div className="w-full lg:w-[320px] xl:w-[420px] bg-[#fbf5f5] rounded-lg shadow-sm border border-red-100 overflow-hidden flex flex-col h-[500px] lg:h-[calc(100vh-4rem)]">
+      <div className="w-full lg:w-[320px] xl:w-105 bg-[#fbf5f5] rounded-lg shadow-sm border border-red-100 overflow-hidden flex flex-col h-125 lg:h-[calc(100vh-4rem)]">
         <div className="flex border-b border-red-100 bg-[#fbf5f5] sticky top-0 z-10 pt-2 px-2">
           <button className="flex-1 pb-3 text-[15px] font-bold text-[#a81c1c] border-b-[3px] border-[#a81c1c]">
             पर्वहरू
@@ -200,7 +200,7 @@ const NepaliPatro = () => {
               
               return (
                 <div key={`${bsDate}-${i}`} className="py-4 px-2 flex gap-4 items-center group hover:bg-red-50/50 transition-colors">
-                  <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden bg-white shadow-sm border border-gray-100 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full shrink-0 overflow-hidden bg-white shadow-sm border border-gray-100 flex items-center justify-center">
                     <img src={`https://api.dicebear.com/7.x/identicon/svg?seed=${event.nameNe}&backgroundColor=f8d7da`} alt="Icon" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -209,7 +209,7 @@ const NepaliPatro = () => {
                       {event.type === 'public-holiday' ? 'सार्वजनिक बिदा' : (event.type === 'festival' ? 'चाडपर्व' : 'विविध')}
                     </p>
                   </div>
-                  <div className="text-right flex-shrink-0">
+                  <div className="text-right shrink-0">
                     <div className="text-[13px] font-bold text-gray-900">
                       {toNepaliDigits(day)} {monthName(view.month, true, true)}
                     </div>
